@@ -1,0 +1,92 @@
+[
+  {
+    "companyName": "Amazon",
+    "aliases": ["Amazon.com", "Amazon Web Services", "AWS"],
+    "sponsorshipTypes": ["H1B", "OPT", "STEM-OPT"],
+    "lastYearSponsored": 2024,
+    "sponsorshipConfidence": 95,
+    "notes": "Consistent H1B sponsor with large new grad intake across product, operations, and analytics.",
+    "source": "USCIS H1B Disclosure 2024"
+  },
+  {
+    "companyName": "Bloomberg",
+    "aliases": ["Bloomberg LP"],
+    "sponsorshipTypes": ["H1B", "OPT"],
+    "lastYearSponsored": 2024,
+    "sponsorshipConfidence": 92,
+    "notes": "Known to sponsor analysts and product/financial technology roles in NYC.",
+    "source": "MyVisaJobs 2024"
+  },
+  {
+    "companyName": "Goldman Sachs",
+    "aliases": ["Goldman Sachs Group"],
+    "sponsorshipTypes": ["H1B", "OPT"],
+    "lastYearSponsored": 2024,
+    "sponsorshipConfidence": 90,
+    "notes": "High volume sponsor for analyst programs across finance and product strategy.",
+    "source": "USCIS H1B Disclosure 2024"
+  },
+  {
+    "companyName": "McKinsey & Company",
+    "aliases": ["McKinsey"],
+    "sponsorshipTypes": ["H1B", "OPT"],
+    "lastYearSponsored": 2023,
+    "sponsorshipConfidence": 88,
+    "notes": "Sponsors business analyst and implementation consultant roles globally.",
+    "source": "USCIS H1B Disclosure 2023"
+  },
+  {
+    "companyName": "Stripe",
+    "aliases": ["Stripe Payments", "Stripe Inc"],
+    "sponsorshipTypes": ["H1B", "OPT", "STEM-OPT"],
+    "lastYearSponsored": 2024,
+    "sponsorshipConfidence": 85,
+    "notes": "Sponsors product, risk, and analytics hires with strong OPT-to-H1B conversion.",
+    "source": "MyVisaJobs 2024"
+  },
+  {
+    "companyName": "Capital One",
+    "aliases": ["Capital One Financial"],
+    "sponsorshipTypes": ["H1B", "OPT", "STEM-OPT"],
+    "lastYearSponsored": 2024,
+    "sponsorshipConfidence": 87,
+    "notes": "Frequent sponsor for analyst, product, and data roles; OPT-friendly rotational programs.",
+    "source": "H1Bdata.info 2024"
+  },
+  {
+    "companyName": "Meta",
+    "aliases": ["Facebook", "Meta Platforms"],
+    "sponsorshipTypes": ["H1B", "OPT", "STEM-OPT"],
+    "lastYearSponsored": 2024,
+    "sponsorshipConfidence": 94,
+    "notes": "High confidence sponsor for product management, analytics, and research roles.",
+    "source": "USCIS H1B Disclosure 2024"
+  },
+  {
+    "companyName": "Microsoft",
+    "aliases": ["Microsoft Corporation"],
+    "sponsorshipTypes": ["H1B", "OPT", "STEM-OPT"],
+    "lastYearSponsored": 2024,
+    "sponsorshipConfidence": 96,
+    "notes": "Consistent sponsor with strong support for OPT to H1B transitions across product disciplines.",
+    "source": "USCIS H1B Disclosure 2024"
+  },
+  {
+    "companyName": "Deloitte",
+    "aliases": ["Deloitte Consulting", "Deloitte & Touche"],
+    "sponsorshipTypes": ["H1B", "OPT"],
+    "lastYearSponsored": 2023,
+    "sponsorshipConfidence": 82,
+    "notes": "Historically sponsors strategy and analytics roles; verify per office.",
+    "source": "MyVisaJobs 2023"
+  },
+  {
+    "companyName": "PwC",
+    "aliases": ["PricewaterhouseCoopers", "PwC US"],
+    "sponsorshipTypes": ["H1B", "OPT"],
+    "lastYearSponsored": 2023,
+    "sponsorshipConfidence": 80,
+    "notes": "Sponsors select advisory and product analytics roles; strong OPT conversion for high performers.",
+    "source": "H1Bdata.info 2023"
+  }
+]

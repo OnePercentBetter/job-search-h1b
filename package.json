@@ -1,0 +1,46 @@
+{
+  "name": "job-search",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Job search application for college seniors - new grad roles and internships",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
+    "dev:api": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/api && npm run build -w apps/web",
+    "crawl": "tsx scripts/crawlers/github-jobs.ts",
+    "crawl:all": "tsx scripts/crawlers/multi-platform-crawler.ts",
+    "discover:companies": "tsx scripts/crawlers/discover-companies.ts",
+    "discover:dynamic": "tsx scripts/crawlers/dynamic-discovery.ts",
+    "seed:sponsors": "tsx scripts/seed-visa-sponsors.ts",
+    "generate:visa-sponsors": "tsx scripts/generate-visa-sponsors-from-uscis.ts",
+    "filter:visa-sponsors": "tsx scripts/filter-visa-sponsors.ts",
+    "db:setup": "tsx scripts/create-tables.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "concurrently": "^8.2.2",
+    "drizzle-kit": "^0.31.5",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "@types/uuid": "^10.0.0",
+    "cheerio": "^1.1.2",
+    "csv-parse": "^5.5.5",
+    "drizzle-orm": "^0.44.6",
+    "uuid": "^13.0.0",
+    "validator": "^13.15.15"
+  }
+}
