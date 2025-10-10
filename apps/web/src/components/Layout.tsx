@@ -1,8 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Search, User, Briefcase } from 'lucide-react'
+import { Search, User, Briefcase, LogOut } from 'lucide-react'
+import { useAuth } from '../providers/AuthProvider'
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
+  const { user, signOut } = useAuth()
+
+  const userInitial = user?.email?.charAt(0)?.toUpperCase()
 
   const isActive = (path: string) => location.pathname === path
 
@@ -14,7 +18,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center">
               <span className="text-xl font-bold text-primary-600">JobSearch</span>
             </div>
-            <div className="flex space-x-8">
+            <div className="flex items-center space-x-6">
               <Link
                 to="/dashboard"
                 className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
@@ -45,9 +49,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
-                <User className="w-4 h-4 mr-2" />
-                Profile
-              </Link>
+                  <User className="w-4 h-4 mr-2" />
+                  Profile
+                </Link>
+              <div className="hidden sm:flex items-center space-x-3 text-sm text-gray-600">
+                {userInitial && (
+                  <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-semibold">
+                    {userInitial}
+                  </div>
+                )}
+                <span>{user?.email}</span>
+              </div>
+              <button
+                onClick={signOut}
+                className="inline-flex items-center text-sm text-gray-500 hover:text-primary-600 transition-colors"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign out
+              </button>
             </div>
           </div>
         </div>
@@ -56,4 +75,3 @@ export function Layout({ children }: { children: React.ReactNode }) {
     </div>
   )
 }
-

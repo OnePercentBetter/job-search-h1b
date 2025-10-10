@@ -12,6 +12,7 @@ import {
   isNotNull
 } from 'drizzle-orm'
 import { generateEmbedding } from '../lib/openai'
+import { enrichJobsWithSponsors, SponsorSummary, getSponsorSummaryForCompany } from './visa-service'
 
 interface SearchParams {
   description?: string
@@ -29,7 +30,122 @@ interface SearchParams {
   userId?: string
 }
 
-export async function searchJobs(params: SearchParams) {
+export interface JobSearchResult {
+  id: string
+  title: string
+  company: string
+  location: string | null
+  description: string | null
+  url: string
+  isRemote: boolean | null
+  jobType: string | null
+  source: string | null
+  scrapedAt: Date | null
+  postedAt: Date | null
+  visaStatus?: string | null
+  sponsorshipConfidence?: number | null
+  visaNotes?: string | null
+  similarity?: number
+  visaSponsor?: SponsorSummary | null
+  matchScore?: number
+  scoreDetails?: {
+    similarity: number
+    recency: number
+    sponsorship: number
+  }
+  matchReasons?: string[]
+}
+
+function computeRecencyScore(postedAt: Date | null): number {
+  if (!postedAt) return 0
+  const now = Date.now()
+  const postedTime = postedAt.getTime()
+  const diffInDays = (now - postedTime) / (1000 * 60 * 60 * 24)
+  if (diffInDays <= 3) return 1
+  if (diffInDays <= 7) return 0.8
+  if (diffInDays <= 14) return 0.6
+  if (diffInDays <= 30) return 0.4
+  if (diffInDays <= 60) return 0.2
+  return 0
+}
+
+function computeSponsorScore(job: {
+  visaStatus?: string | null
+  sponsorshipConfidence?: number | null
+  visaSponsor?: SponsorSummary | null
+}): number {
+  const visaStatus = job.visaStatus ?? null
+  const confidence =
+    job.visaSponsor?.sponsorshipConfidence ?? job.sponsorshipConfidence ?? null
+
+  if (visaStatus === 'sponsor_verified') return 1
+  if (confidence !== null && confidence >= 80) return 0.9
+  if (confidence !== null && confidence >= 60) return 0.6
+  if (visaStatus === 'likely_sponsor') return 0.5
+  if (confidence !== null && confidence >= 40) return 0.3
+  return 0
+}
+
+function buildMatchReasons(job: JobSearchResult, scores: { similarity: number; recency: number; sponsorship: number }) {
+  const reasons: string[] = []
+  if (scores.similarity >= 0.75) {
+    reasons.push('Strong alignment with your profile preferences')
+  } else if (scores.similarity >= 0.5) {
+    reasons.push('Good match to your stated interests')
+  }
+
+  if (scores.recency >= 0.6) {
+    reasons.push('Recently posted opportunity')
+  }
+
+  if (scores.sponsorship >= 0.6) {
+    if (job.visaStatus === 'sponsor_verified' || job.visaSponsor?.sponsorshipConfidence) {
+      reasons.push('High confidence visa sponsorship')
+    } else {
+      reasons.push('Likely to sponsor work visas')
+    }
+  }
+
+  if (!reasons.length) {
+    reasons.push('Matches your filters')
+  }
+
+  return reasons
+}
+
+function applyScoring(results: JobSearchResult[]): JobSearchResult[] {
+  return results
+    .map((job) => {
+      const similarityScore = typeof job.similarity === 'number' ? Math.max(0, Math.min(1, job.similarity)) : 0
+      const postedAt = job.postedAt ? new Date(job.postedAt) : null
+      const recencyScore = computeRecencyScore(postedAt)
+      const sponsorshipScore = computeSponsorScore(job)
+
+      // Weighted composite score
+      const matchScore =
+        similarityScore * 0.6 +
+        recencyScore * 0.25 +
+        sponsorshipScore * 0.15
+
+      const scoreDetails = {
+        similarity: Number(similarityScore.toFixed(3)),
+        recency: Number(recencyScore.toFixed(3)),
+        sponsorship: Number(sponsorshipScore.toFixed(3)),
+      }
+
+      const matchReasons = buildMatchReasons(job, scoreDetails)
+
+      return {
+        ...job,
+        matchScore: Number(matchScore.toFixed(3)),
+        scoreDetails,
+        matchReasons,
+      }
+    })
+    .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))
+}
+
+export async function searchJobs(params: SearchParams): Promise<JobSearchResult[]> {
   const {
     description,
     jobType,
@@ -124,7 +240,7 @@ export async function searchJobs(params: SearchParams) {
     console.log('Using search embedding, length:', searchEmbedding.length)
     const similarity = sql<number>`1 - (${cosineDistance(jobs.embedding, searchEmbedding)})`
     
-    const results = await db
+    const rawResults = await db
       .select({
         id: jobs.id,
         title: jobs.title,
@@ -148,14 +264,15 @@ export async function searchJobs(params: SearchParams) {
       .limit(limit)
       .offset(offset)
 
-    console.log('Vector search results count:', results.length)
-    return results
+    console.log('Vector search results count:', rawResults.length)
+    const enriched = await enrichJobsWithSponsors(rawResults)
+    return applyScoring(enriched)
   } else {
     console.log('No search embedding available')
   }
 
   // Otherwise, just filter without vector search (fallback)
-  const results = await db
+  const rawResults = await db
     .select({
       id: jobs.id,
       title: jobs.title,
@@ -178,12 +295,20 @@ export async function searchJobs(params: SearchParams) {
     .limit(limit)
     .offset(offset)
   
-  return results
+  const enriched = await enrichJobsWithSponsors(rawResults)
+  return applyScoring(enriched)
 }
 
 export async function getJobById(id: string) {
   const [job] = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1)
-  return job || null
+  if (!job) {
+    return null
+  }
+  const visaSponsor = job.company ? await getSponsorSummaryForCompany(job.company) : null
+  return {
+    ...job,
+    visaSponsor,
+  }
 }
 
 export async function getTotalJobCount(filters: Omit<SearchParams, 'limit' | 'offset'>) {
@@ -247,4 +372,3 @@ export async function getTotalJobCount(filters: Omit<SearchParams, 'limit' | 'of
 
   return result.count
 }
-

@@ -4,6 +4,14 @@ interface ApplicationCardProps {
     status: string
     appliedAt: string
     notes?: string
+    job?: {
+      id: string
+      title: string | null
+      company: string | null
+      url: string | null
+      visaStatus?: string | null
+      sponsorshipConfidence?: number | null
+    } | null
   }
 }
 
@@ -20,6 +28,16 @@ export function ApplicationCard({ application }: ApplicationCardProps) {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
       <div className="flex justify-between items-start">
         <div>
+          {application.job && (
+            <>
+              <p className="text-sm font-medium text-gray-900">
+                {application.job.title ?? 'Saved job'}
+              </p>
+              <p className="text-xs text-gray-500 mb-1">
+                {application.job.company ?? 'Unknown company'}
+              </p>
+            </>
+          )}
           <p className="text-sm text-gray-600">
             {new Date(application.appliedAt).toLocaleDateString()}
           </p>
@@ -35,7 +53,16 @@ export function ApplicationCard({ application }: ApplicationCardProps) {
           {application.status}
         </span>
       </div>
+      {application.job?.url && (
+        <a
+          href={application.job.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-block text-sm text-primary-600 hover:text-primary-700"
+        >
+          View posting
+        </a>
+      )}
     </div>
   )
 }
-

@@ -5,12 +5,15 @@ import { logger } from 'hono/logger'
 import jobsRouter from './routes/jobs'
 import applicationsRouter from './routes/applications'
 import profileRouter from './routes/profile'
+import type { AppEnv } from './types'
+import { attachUser } from './middleware/auth'
 
-const app = new Hono()
+const app = new Hono<AppEnv>()
 
 // Middleware
 app.use('/*', cors())
 app.use('/*', logger())
+app.use('/api/*', attachUser)
 
 // Health check
 app.get('/health', (c) => {
@@ -41,4 +44,3 @@ serve({
   fetch: app.fetch,
   port,
 })
-

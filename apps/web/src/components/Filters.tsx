@@ -13,8 +13,8 @@ interface FiltersProps {
 export function Filters({ filters, onChange }: FiltersProps) {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="flex flex-col">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Job Type
           </label>
@@ -29,7 +29,7 @@ export function Filters({ filters, onChange }: FiltersProps) {
           </select>
         </div>
 
-        <div>
+        <div className="flex flex-col">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Location
           </label>
@@ -42,7 +42,7 @@ export function Filters({ filters, onChange }: FiltersProps) {
           />
         </div>
 
-        <div>
+        <div className="flex flex-col">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Remote
           </label>
@@ -62,7 +62,7 @@ export function Filters({ filters, onChange }: FiltersProps) {
           </select>
         </div>
 
-        <div>
+        <div className="flex flex-col">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Visa Status
           </label>
@@ -83,7 +83,7 @@ export function Filters({ filters, onChange }: FiltersProps) {
           </select>
         </div>
 
-        <div>
+        <div className="flex flex-col">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Min Confidence
           </label>
@@ -103,7 +103,7 @@ export function Filters({ filters, onChange }: FiltersProps) {
           />
         </div>
 
-        <div className="flex items-center mt-6">
+        <div className="flex items-center sm:col-span-2 xl:col-span-1">
           <input
             id="requiresSponsor"
             type="checkbox"
@@ -125,4 +125,3 @@ export function Filters({ filters, onChange }: FiltersProps) {
     </div>
   )
 }
-

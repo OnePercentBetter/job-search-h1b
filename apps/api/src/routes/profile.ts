@@ -1,9 +1,12 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { v4 as uuidv4 } from 'uuid'
 import { updateUserProfile, getUserProfile } from '../services/profile-service'
+import { requireUser } from '../middleware/auth'
+import type { AppEnv } from '../types'
 
-const profile = new Hono()
+const profile = new Hono<AppEnv>()
+
+profile.use('*', requireUser)
 
 const updateProfileSchema = z.object({
   description: z.string().min(10).max(2000),
@@ -12,16 +15,32 @@ const updateProfileSchema = z.object({
 // GET /api/profile - Get user profile
 profile.get('/', async (c) => {
   try {
-    // TODO: Get userId from auth middleware
-    const userId = c.req.header('x-user-id') || uuidv4()
-    
-    const userProfile = await getUserProfile(userId)
-    
-    if (!userProfile) {
-      return c.json({ error: 'Profile not found' }, 404)
+    const user = c.get('user')
+    if (!user) {
+      return c.json({ error: 'Authentication required' }, 401)
     }
-    
-    return c.json({ profile: userProfile })
+
+    const userProfile = await getUserProfile(user.authId)
+
+    if (userProfile) {
+      return c.json({
+        profile: {
+          ...userProfile,
+          email: userProfile.email ?? user.email ?? null,
+        },
+      })
+    }
+
+    return c.json({
+      profile: {
+        id: user.id,
+        authId: user.authId,
+        email: user.email ?? null,
+        profileDescription: null,
+        profileEmbedding: null,
+        createdAt: user.userRecord?.createdAt ?? null,
+      },
+    })
   } catch (error) {
     console.error('Get profile error:', error)
     return c.json({ error: 'Failed to fetch profile' }, 500)
@@ -33,12 +52,14 @@ profile.put('/', async (c) => {
   try {
     const body = await c.req.json()
     const data = updateProfileSchema.parse(body)
-    
-    // TODO: Get userId from auth middleware
-    const userId = c.req.header('x-user-id') || uuidv4()
-    
-    const userProfile = await updateUserProfile(userId, data.description)
-    
+
+    const user = c.get('user')
+    if (!user) {
+      return c.json({ error: 'Authentication required' }, 401)
+    }
+
+    const userProfile = await updateUserProfile(user.authId, user.email ?? undefined, data.description)
+
     return c.json({ profile: userProfile })
   } catch (error) {
     console.error('Update profile error:', error)
@@ -50,4 +71,3 @@ profile.put('/', async (c) => {
 })
 
 export default profile
-

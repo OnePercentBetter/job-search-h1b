@@ -1,12 +1,24 @@
 import { useQuery } from '@tanstack/react-query'
 import { Layout } from '../components/Layout'
 import { ApplicationCard } from '../components/ApplicationCard'
+import { useAuth } from '../providers/AuthProvider'
 
 export function Applications() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['applications'],
+  const { session, getAccessToken } = useAuth()
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['applications', session?.user?.id],
+    enabled: !!session,
     queryFn: async () => {
-      const response = await fetch('/api/applications')
+      const token = await getAccessToken()
+      if (!token) {
+        throw new Error('Authentication token unavailable')
+      }
+      const response = await fetch('/api/applications', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
       if (!response.ok) throw new Error('Failed to fetch applications')
       return response.json()
     },
@@ -18,6 +30,11 @@ export function Applications() {
         <h1 className="text-3xl font-bold text-gray-900 mb-6">My Applications</h1>
 
         {isLoading && <p>Loading applications...</p>}
+        {isError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 mb-4">
+            Unable to load applications right now.
+          </div>
+        )}
 
         {data && (
           <div className="space-y-4">
@@ -37,4 +54,3 @@ export function Applications() {
     </Layout>
   )
 }
-

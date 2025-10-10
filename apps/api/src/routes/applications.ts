@@ -1,13 +1,16 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { v4 as uuidv4 } from 'uuid'
-import { 
-  getUserApplications, 
-  createApplication, 
-  updateApplicationStatus 
+import {
+  getUserApplications,
+  createApplication,
+  updateApplicationStatus
 } from '../services/application-service'
+import { requireUser } from '../middleware/auth'
+import type { AppEnv } from '../types'
 
-const applications = new Hono()
+const applications = new Hono<AppEnv>()
+
+applications.use('*', requireUser)
 
 const createApplicationSchema = z.object({
   jobId: z.string().uuid(),
@@ -23,11 +26,13 @@ const updateStatusSchema = z.object({
 // GET /api/applications - Get user's applications
 applications.get('/', async (c) => {
   try {
-    // TODO: Get userId from auth middleware
-    const userId = c.req.header('x-user-id') || uuidv4()
-    
-    const apps = await getUserApplications(userId)
-    
+    const user = c.get('user')
+    if (!user) {
+      return c.json({ error: 'Authentication required' }, 401)
+    }
+
+    const apps = await getUserApplications(user.id)
+
     return c.json({ applications: apps, count: apps.length })
   } catch (error) {
     console.error('Get applications error:', error)
@@ -40,12 +45,14 @@ applications.post('/', async (c) => {
   try {
     const body = await c.req.json()
     const data = createApplicationSchema.parse(body)
-    
-    // TODO: Get userId from auth middleware
-    const userId = c.req.header('x-user-id') || uuidv4()
-    
-    const application = await createApplication(userId, data)
-    
+
+    const user = c.get('user')
+    if (!user) {
+      return c.json({ error: 'Authentication required' }, 401)
+    }
+
+    const application = await createApplication(user.id, data)
+
     return c.json({ application }, 201)
   } catch (error) {
     console.error('Create application error:', error)
@@ -62,9 +69,14 @@ applications.patch('/:id', async (c) => {
     const id = c.req.param('id')
     const body = await c.req.json()
     const data = updateStatusSchema.parse(body)
-    
-    const application = await updateApplicationStatus(id, data)
-    
+
+    const user = c.get('user')
+    if (!user) {
+      return c.json({ error: 'Authentication required' }, 401)
+    }
+
+    const application = await updateApplicationStatus(id, user.id, data)
+
     if (!application) {
       return c.json({ error: 'Application not found' }, 404)
     }
@@ -80,4 +92,3 @@ applications.patch('/:id', async (c) => {
 })
 
 export default applications
-

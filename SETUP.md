@@ -31,10 +31,15 @@ Create a file called `.env` in the root directory:
 # Supabase
 SUPABASE_URL=https://xxxxx.supabase.co
 SUPABASE_ANON_KEY=your-anon-key-here
+SUPABASE_JWT_SECRET=your-jwt-secret-here
 DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.xxxxx.supabase.co:5432/postgres
 
 # OpenAI
 OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx
+
+# Landing Club (Visa Sponsors)
+LANDING_CLUB_API_KEY=your-landing-club-api-key
+LANDING_CLUB_API_BASE_URL=https://api.landing.club/v1
 
 # API Config
 PORT=3000
@@ -171,4 +176,3 @@ Add environment variables in Vercel dashboard:
 ---
 
 **You're all set! Build something amazing this weekend! 🚀**
-

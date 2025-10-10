@@ -1,5 +1,6 @@
-import { MapPin, Building2, ExternalLink, Bookmark, ShieldCheck } from 'lucide-react'
+import { MapPin, Building2, ExternalLink, Bookmark, ShieldCheck, CalendarDays, Info } from 'lucide-react'
 import { useState } from 'react'
+import { useAuth } from '../providers/AuthProvider'
 
 interface JobCardProps {
   job: {
@@ -14,18 +15,46 @@ interface JobCardProps {
     visaStatus?: string
     sponsorshipConfidence?: number
     visaNotes?: string | null
+    visaSponsor?: {
+      companyName: string
+      sponsorshipConfidence: number | null
+      lastYearSponsored: number | null
+      visaTypes?: string[] | null
+      latestUpdate?: { summary: string; occurredAt?: string } | null
+      source?: string | null
+    } | null
   }
 }
 
 export function JobCard({ job }: JobCardProps) {
   const [isSaving, setIsSaving] = useState(false)
+  const { getAccessToken } = useAuth()
+  const sponsorConfidence = job.visaSponsor?.sponsorshipConfidence ?? job.sponsorshipConfidence ?? null
+  const visaBadgeLabel =
+    job.visaSponsor?.sponsorshipConfidence && job.visaSponsor.sponsorshipConfidence >= 75
+      ? 'Verified Sponsor'
+      : job.visaSponsor?.sponsorshipConfidence
+        ? 'Likely Sponsor'
+        : 'Visa Friendly'
+  const latestUpdateDate = job.visaSponsor?.latestUpdate?.occurredAt
+  const formattedUpdateDate =
+    latestUpdateDate && !Number.isNaN(new Date(latestUpdateDate).getTime())
+      ? new Date(latestUpdateDate).toLocaleDateString()
+      : null
 
   const handleSave = async () => {
     setIsSaving(true)
     try {
+      const token = await getAccessToken()
+      if (!token) {
+        throw new Error('Authentication required')
+      }
       await fetch('/api/applications', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ jobId: job.id }),
       })
       alert('Job saved!')
@@ -70,13 +99,18 @@ export function JobCard({ job }: JobCardProps) {
           {job.jobType === 'new_grad' ? 'New Grad' : 'Internship'}
         </span>
         <div className="flex items-center gap-3 text-xs text-gray-600">
-          {job.visaStatus === 'sponsor_verified' && (
+          {job.visaSponsor && (
+            <span className="inline-flex items-center px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">
+              <ShieldCheck className="w-3 h-3 mr-1" /> {visaBadgeLabel}
+            </span>
+          )}
+          {!job.visaSponsor && job.visaStatus === 'sponsor_verified' && (
             <span className="inline-flex items-center px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">
               <ShieldCheck className="w-3 h-3 mr-1" /> Visa Sponsor
             </span>
           )}
-          {typeof job.sponsorshipConfidence === 'number' && (
-            <span>Confidence: {job.sponsorshipConfidence}%</span>
+          {sponsorConfidence !== null && (
+            <span>Confidence: {sponsorConfidence}%</span>
           )}
         </div>
         <a
@@ -89,7 +123,38 @@ export function JobCard({ job }: JobCardProps) {
           <ExternalLink className="w-4 h-4 ml-1" />
         </a>
       </div>
+
+      {job.visaSponsor && (
+        <div className="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-600 space-y-2">
+          <div className="flex items-center gap-2">
+            <Info className="w-4 h-4 text-primary-500" />
+            <span>
+              {job.visaSponsor.companyName}{' '}
+              {job.visaSponsor.lastYearSponsored
+                ? `(Last sponsored in ${job.visaSponsor.lastYearSponsored})`
+                : ''}
+            </span>
+          </div>
+          {job.visaSponsor.visaTypes && job.visaSponsor.visaTypes.length > 0 && (
+            <div className="text-xs text-gray-500">
+              Supports: {job.visaSponsor.visaTypes.join(', ')}
+            </div>
+          )}
+          {job.visaSponsor.latestUpdate?.summary && (
+            <div className="flex items-start gap-2 text-xs text-gray-600">
+              <CalendarDays className="w-4 h-4 mt-0.5 text-primary-400" />
+              <p>
+                {job.visaSponsor.latestUpdate.summary}
+                {formattedUpdateDate && (
+                  <span className="block text-[11px] text-gray-400 mt-1">
+                    {formattedUpdateDate}
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
-

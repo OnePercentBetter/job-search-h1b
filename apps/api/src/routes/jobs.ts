@@ -1,8 +1,35 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { searchJobs, getJobById, getTotalJobCount } from '../services/job-service'
+import type { AppEnv } from '../types'
 
-const jobs = new Hono()
+const jobs = new Hono<AppEnv>()
+
+// GET /api/jobs - Basic jobs listing
+jobs.get('/', async (c) => {
+  try {
+    const query = c.req.query()
+    const params = {
+      limit: parseInt(query.limit || '10'),
+      offset: parseInt(query.offset || '0'),
+    }
+    
+    const [results, totalCount] = await Promise.all([
+      searchJobs(params),
+      getTotalJobCount(params)
+    ])
+    
+    return c.json({ 
+      jobs: results, 
+      count: results.length,
+      total: totalCount,
+      hasMore: (params.offset || 0) + results.length < totalCount
+    })
+  } catch (error) {
+    console.error('Jobs listing error:', error)
+    return c.json({ error: 'Failed to fetch jobs' }, 500)
+  }
+})
 
 const searchSchema = z.object({
   description: z.string().optional(),
@@ -38,7 +65,7 @@ jobs.get('/search', async (c) => {
       includeInactive: query.includeInactive === 'true',
       limit: query.limit,
       offset: query.offset,
-      userId: query.userId || c.req.header('x-user-id'),
+      userId: query.userId || c.get('user')?.id,
     })
 
     const [results, totalCount] = await Promise.all([
@@ -79,4 +106,3 @@ jobs.get('/:id', async (c) => {
 })
 
 export default jobs
-

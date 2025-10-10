@@ -14,6 +14,7 @@ A job search platform for college seniors looking for new grad roles and interns
 - Dedicated `visa_sponsors` table with curated data (seeded in `data/visa-sponsors.json`)
 - Jobs enriched with visa metadata (status, confidence, sponsor notes, link freshness)
 - GitHub crawler now fetches live repos and cross-references sponsor data, auto-detects stale postings
+- Landing Club API integration keeps sponsor records fresh with real-time company updates
 - API search supports visa-specific filters (`visaStatus`, `minSponsorshipConfidence`, `requiresVerifiedSponsor`)
 - Frontend filters expose sponsor status, confidence thresholds, and verified-only toggle
 
@@ -68,10 +69,15 @@ Create a `.env` file in the root:
 # Supabase (or regular PostgreSQL)
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_JWT_SECRET=your-jwt-secret
 DATABASE_URL=postgresql://user:password@localhost:5432/jobsearch
 
 # OpenAI
 OPENAI_API_KEY=sk-your-openai-key
+
+# Landing Club (Visa Sponsors)
+LANDING_CLUB_API_KEY=your-landing-club-api-key
+LANDING_CLUB_API_BASE_URL=https://api.landing.club/v1
 
 # API
 PORT=3000
@@ -248,4 +254,3 @@ This is a personal project, but suggestions are welcome! Open an issue to discus
 ---
 
 **Built with ❤️ for college students navigating the job search**
-
