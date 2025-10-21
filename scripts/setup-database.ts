@@ -6,24 +6,20 @@
 import 'dotenv/config'
 import postgres from 'postgres'
 
-const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_URL || ''
+const connectionString = process.env.DATABASE_URL ?? ''
 
 if (!connectionString) {
-  console.error('❌ DATABASE_URL or SUPABASE_URL is required')
+  console.error('❌ DATABASE_URL environment variable is required')
   process.exit(1)
 }
 
 async function setupDatabase() {
   console.log('🔧 Setting up database...')
 
-  const dbUrl = connectionString.includes('supabase.co')
-    ? connectionString.replace('https://', 'postgresql://postgres:') + '/postgres'
-    : connectionString
-
-  const sql = postgres(dbUrl)
+  const sql = postgres(connectionString)
 
   try {
-    // Enable pgvector extension
+    // Enable pgvector extension so vector columns/migrations succeed
     console.log('📦 Enabling pgvector extension...')
     await sql`CREATE EXTENSION IF NOT EXISTS vector`
 
@@ -41,4 +37,3 @@ async function setupDatabase() {
 }
 
 setupDatabase()
-

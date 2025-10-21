@@ -11,67 +11,73 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const isActive = (path: string) => location.pathname === path
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <span className="text-xl font-bold text-primary-600">JobSearch</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-white text-slate-800">
+      <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
+          <div className="flex flex-wrap items-center justify-between gap-4 py-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white flex items-center justify-center font-semibold shadow-md">
+                JS
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-slate-900">JobSearch</p>
+                <p className="text-xs text-slate-500">Find your next visa-friendly role</p>
+              </div>
             </div>
-            <div className="flex items-center space-x-6">
+            <nav className="flex flex-wrap items-center gap-4 text-sm font-medium">
               <Link
                 to="/dashboard"
-                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 transition-all ${
                   isActive('/dashboard')
-                    ? 'border-primary-500 text-gray-900'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    ? 'bg-sky-500/10 text-sky-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                <Search className="w-4 h-4 mr-2" />
+                <Search className="w-4 h-4" />
                 Search
               </Link>
               <Link
                 to="/applications"
-                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 transition-all ${
                   isActive('/applications')
-                    ? 'border-primary-500 text-gray-900'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    ? 'bg-sky-500/10 text-sky-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                <Briefcase className="w-4 h-4 mr-2" />
+                <Briefcase className="w-4 h-4" />
                 Applications
               </Link>
               <Link
                 to="/profile"
-                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 transition-all ${
                   isActive('/profile')
-                    ? 'border-primary-500 text-gray-900'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    ? 'bg-sky-500/10 text-sky-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                  <User className="w-4 h-4 mr-2" />
-                  Profile
-                </Link>
-              <div className="hidden sm:flex items-center space-x-3 text-sm text-gray-600">
-                {userInitial && (
-                  <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-semibold">
-                    {userInitial}
-                  </div>
-                )}
-                <span>{user?.email}</span>
-              </div>
+                <User className="w-4 h-4" />
+                Profile
+              </Link>
+            </nav>
+            <div className="flex items-center gap-3 text-sm text-slate-600">
+              {userInitial && (
+                <div className="hidden sm:flex h-9 w-9 rounded-full bg-sky-500/15 text-sky-600 items-center justify-center font-semibold">
+                  {userInitial}
+                </div>
+              )}
+              <span className="hidden sm:inline-flex">{user?.email}</span>
               <button
                 onClick={signOut}
-                className="inline-flex items-center text-sm text-gray-500 hover:text-primary-600 transition-colors"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-slate-500 hover:border-sky-300 hover:text-sky-600 transition-colors"
               >
-                <LogOut className="w-4 h-4 mr-2" />
+                <LogOut className="w-4 h-4" />
                 Sign out
               </button>
             </div>
           </div>
         </div>
-      </nav>
-      <main>{children}</main>
+      </header>
+      <main className="pb-16">{children}</main>
     </div>
   )
 }

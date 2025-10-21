@@ -9,17 +9,76 @@ import { jobs, visaSponsors } from '../../apps/api/src/db/schema'
 import { generateEmbedding } from '../../apps/api/src/lib/openai'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
-import { z } from 'zod'
+import { extractSmartRecruitersJobs } from './adapters/smartrecruiters'
+import { extractWorkableJobs } from './adapters/workable'
 
 const client = postgres(process.env.DATABASE_URL!)
 const dbConnection = drizzle(client, { schema: { jobs, visaSponsors } })
 
-interface JobSource {
-  name: string
-  platform: 'github' | 'lever' | 'greenhouse' | 'workday' | 'bamboohr'
-  url: string
-  location?: string
-  industry?: string
+const DEFAULT_RETRYABLE_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504])
+
+interface FetchRetryConfig {
+  retries?: number
+  backoffMs?: number
+  retryOnStatuses?: Set<number>
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit = {},
+  config: FetchRetryConfig = {}
+) {
+  const {
+    retries = 2,
+    backoffMs = 500,
+    retryOnStatuses = DEFAULT_RETRYABLE_STATUSES,
+  } = config
+
+  let attempt = 0
+  let lastError: unknown = null
+
+  while (attempt <= retries) {
+    try {
+      const response = await fetch(url, init)
+
+      if (response.ok) {
+        return response
+      }
+
+      if (
+        attempt === retries ||
+        !retryOnStatuses.has(response.status)
+      ) {
+        return response
+      }
+
+      console.warn(
+        `⏳ Retry ${attempt + 1}/${retries + 1} for ${url} (HTTP ${response.status} ${response.statusText})`
+      )
+    } catch (error) {
+      lastError = error
+      if (attempt === retries) {
+        throw error
+      }
+
+      console.warn(
+        `⚠️  Network error fetching ${url} (attempt ${attempt + 1}): ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    }
+
+    attempt++
+    await sleep(backoffMs * attempt)
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(`Failed to fetch ${url} after ${retries + 1} attempts`)
 }
 
 const GITHUB_SOURCES = [
@@ -62,6 +121,32 @@ const GREENHOUSE_COMPANIES = [
   'netlify', 'supabase', 'planetscale', 'railway', 'render'
 ]
 
+const SMARTRECRUITERS_COMPANIES = [
+  'ns1',
+  'palantir',
+  'affirm',
+  'doordash',
+  'pinterest',
+  'spotify',
+  'snowflake',
+  'coinbase',
+  'datadog',
+  'instacart',
+]
+
+const WORKABLE_ACCOUNTS = [
+  'scaleai',
+  'brex',
+  'ramp',
+  'plaid',
+  'retool',
+  'figma',
+  'canva',
+  'vercel',
+  'netlify',
+  'linear',
+]
+
 interface ParsedJob {
   title: string
   company: string
@@ -69,6 +154,8 @@ interface ParsedJob {
   url: string
   description: string
   postedAt?: Date
+  jobType?: 'new_grad' | 'internship'
+  isRemote?: boolean
 }
 
 interface SponsorMatch {
@@ -161,10 +248,12 @@ async function crawlGitHubJobs() {
   for (const source of GITHUB_SOURCES) {
     try {
       console.log(`📥 Fetching ${source.name}...`)
-      const response = await fetch(source.url)
+      const response = await fetchWithRetry(source.url)
       
       if (!response.ok) {
-        console.log(`⚠️  Failed to fetch ${source.name}: ${response.status}`)
+        console.log(
+          `⚠️  Failed to fetch ${source.name}: HTTP ${response.status} ${response.statusText}`
+        )
         continue
       }
 
@@ -200,10 +289,12 @@ async function crawlLeverJobs() {
   for (const company of LEVER_COMPANIES) {
     try {
       const url = `https://api.lever.co/v0/postings/${company}`
-      const response = await fetch(url)
+      const response = await fetchWithRetry(url)
 
       if (!response.ok) {
-        console.log(`⚠️  Skipping ${company} (API unavailable)`)
+        console.log(
+          `⚠️  Skipping ${company} (Lever API HTTP ${response.status} ${response.statusText})`
+        )
         continue
       }
 
@@ -234,7 +325,9 @@ async function crawlLeverJobs() {
           location,
           url: leverJob.hostedUrl,
           description: leverJob.description || '',
-          postedAt: leverJob.createdAt ? new Date(leverJob.createdAt) : undefined
+          postedAt: leverJob.createdAt ? new Date(leverJob.createdAt) : undefined,
+          jobType: title.includes('intern') ? 'internship' : 'new_grad',
+          isRemote,
         }
 
         const sponsor = mapToSponsor(job.company, aliasMap)
@@ -259,10 +352,12 @@ async function crawlGreenhouseJobs() {
   for (const company of GREENHOUSE_COMPANIES) {
     try {
       const url = `https://boards-api.greenhouse.io/v1/boards/${company}/jobs`
-      const response = await fetch(url)
+      const response = await fetchWithRetry(url)
 
       if (!response.ok) {
-        console.log(`⚠️  Skipping ${company} (API unavailable)`)
+        console.log(
+          `⚠️  Skipping ${company} (Greenhouse API HTTP ${response.status} ${response.statusText})`
+        )
         continue
       }
 
@@ -294,7 +389,9 @@ async function crawlGreenhouseJobs() {
           location,
           url: greenhouseJob.absolute_url,
           description: greenhouseJob.content || '',
-          postedAt: greenhouseJob.updated_at ? new Date(greenhouseJob.updated_at) : undefined
+          postedAt: greenhouseJob.updated_at ? new Date(greenhouseJob.updated_at) : undefined,
+          jobType: title.includes('intern') ? 'internship' : 'new_grad',
+          isRemote,
         }
 
         const sponsor = mapToSponsor(job.company, aliasMap)
@@ -310,36 +407,123 @@ async function crawlGreenhouseJobs() {
   return totalSaved
 }
 
-function parseGitHubContent(content: string, sourceName: string): ParsedJob[] {
-  // This is a simplified version - you'd want to implement proper parsing
-  // based on the specific format of each GitHub source
-  const jobs: ParsedJob[] = []
-  
-  // Basic parsing logic - would need to be customized per source
-  const lines = content.split('\n')
-  let currentJob: Partial<ParsedJob> = {}
-  
-  for (const line of lines) {
-    if (line.includes('|') && line.includes('Company')) {
-      // Skip header
-      continue
-    }
-    
-    if (line.includes('|') && line.trim()) {
-      const parts = line.split('|').map(p => p.trim())
-      if (parts.length >= 4) {
-        jobs.push({
-          title: parts[0] || 'Unknown Title',
-          company: parts[1] || 'Unknown Company',
-          location: parts[2] || 'Not specified',
-          url: parts[3] || '',
-          description: '',
-          postedAt: undefined
-        })
+async function crawlSmartRecruitersJobs() {
+  console.log('🕷️  Crawling SmartRecruiters API...')
+
+  const { aliasMap } = await loadSponsors()
+  let totalSaved = 0
+
+  for (const company of SMARTRECRUITERS_COMPANIES) {
+    try {
+      const url = `https://api.smartrecruiters.com/v1/companies/${company}/postings`
+      const response = await fetchWithRetry(url)
+
+      if (!response.ok) {
+        console.log(
+          `⚠️  Skipping ${company} (SmartRecruiters HTTP ${response.status} ${response.statusText})`
+        )
+        continue
       }
+
+      const data = await response.json()
+      const jobs = extractSmartRecruitersJobs(data, company)
+      console.log(`   Found ${jobs.length} SmartRecruiters jobs for ${company}`)
+
+      for (const job of jobs) {
+        const sponsor = mapToSponsor(job.company, aliasMap)
+        await upsertJob(job, sponsor, `smartrecruiters_${company}`)
+        totalSaved++
+      }
+    } catch (error) {
+      console.error(`❌ Error crawling SmartRecruiters company ${company}:`, error)
     }
   }
-  
+
+  console.log(`✅ Saved ${totalSaved} jobs from SmartRecruiters`)
+  return totalSaved
+}
+
+async function crawlWorkableJobs() {
+  console.log('🕷️  Crawling Workable API...')
+
+  const { aliasMap } = await loadSponsors()
+  let totalSaved = 0
+
+  for (const account of WORKABLE_ACCOUNTS) {
+    try {
+      const listUrl = `https://apply.workable.com/api/v3/accounts/${account}/jobs?state=published`
+      const response = await fetchWithRetry(listUrl, {}, { retries: 3, backoffMs: 800 })
+
+      if (!response.ok) {
+        console.log(
+          `⚠️  Skipping ${account} (Workable HTTP ${response.status} ${response.statusText})`
+        ) // continue to next account
+        continue
+      }
+
+      const data = await response.json()
+      const jobs = await extractWorkableJobs(data, account, async (job) => {
+        if (!job.shortcode) return null
+        try {
+          const detailUrl = `https://apply.workable.com/api/v3/accounts/${account}/jobs/${job.shortcode}`
+          const detailResponse = await fetchWithRetry(detailUrl, {}, { retries: 2, backoffMs: 700 })
+          if (!detailResponse.ok) {
+            console.warn(
+              `⚠️  Workable detail unavailable for ${account} (${job.shortcode}): HTTP ${detailResponse.status} ${detailResponse.statusText}`
+            )
+            return null
+          }
+          return detailResponse.json()
+        } catch (error) {
+          console.warn(`⚠️  Failed to fetch Workable detail for ${job.id}`, error)
+          return null
+        }
+      })
+
+      console.log(`   Found ${jobs.length} Workable jobs for ${account}`)
+
+      for (const job of jobs) {
+        const sponsor = mapToSponsor(job.company, aliasMap)
+        await upsertJob(job, sponsor, `workable_${account}`)
+        totalSaved++
+      }
+    } catch (error) {
+      console.error(`❌ Error crawling Workable account ${account}:`, error)
+    }
+  }
+
+  console.log(`✅ Saved ${totalSaved} jobs from Workable`)
+  return totalSaved
+}
+
+function parseGitHubContent(content: string, _sourceName: string): ParsedJob[] {
+  const jobs: ParsedJob[] = []
+
+  const lines = content.split('\n')
+
+  for (const line of lines) {
+    if (!line.includes('|') || !line.trim()) continue
+    if (line.toLowerCase().includes('company') && line.toLowerCase().includes('role')) continue
+
+    const parts = line.split('|').map((p) => p.trim())
+    if (parts.length < 4) continue
+
+    const [titleRaw, companyRaw, locationRaw, urlRaw] = parts
+    const title = titleRaw || 'Unknown Title'
+    const location = locationRaw || 'Not specified'
+
+    jobs.push({
+      title,
+      company: companyRaw || 'Unknown Company',
+      location,
+      url: urlRaw || '',
+      description: '',
+      postedAt: undefined,
+      jobType: title.toLowerCase().includes('intern') ? 'internship' : 'new_grad',
+      isRemote: location.toLowerCase().includes('remote'),
+    })
+  }
+
   return jobs
 }
 
@@ -372,8 +556,8 @@ async function upsertJob(job: ParsedJob, sponsor: SponsorMatch | null, source: s
       postedAt: job.postedAt,
       lastSeenAt: now,
       isActive: true,
-      isRemote: job.location.toLowerCase().includes('remote'),
-      jobType: 'new_grad',
+      isRemote: job.isRemote ?? job.location.toLowerCase().includes('remote'),
+      jobType: job.jobType ?? 'new_grad',
       source,
       embedding,
       visaStatus,
@@ -391,8 +575,8 @@ async function upsertJob(job: ParsedJob, sponsor: SponsorMatch | null, source: s
         postedAt: job.postedAt,
         lastSeenAt: now,
         isActive: true,
-        isRemote: job.location.toLowerCase().includes('remote'),
-        jobType: 'new_grad',
+        isRemote: job.isRemote ?? job.location.toLowerCase().includes('remote'),
+        jobType: job.jobType ?? 'new_grad',
         source,
         embedding,
         visaStatus,
@@ -406,18 +590,45 @@ async function upsertJob(job: ParsedJob, sponsor: SponsorMatch | null, source: s
 async function crawlAllPlatforms() {
   console.log('🚀 Starting multi-platform job crawler...')
   
-  const [githubCount, leverCount, greenhouseCount] = await Promise.all([
+  const results = await Promise.allSettled([
     crawlGitHubJobs(),
     crawlLeverJobs(),
-    crawlGreenhouseJobs()
+    crawlGreenhouseJobs(),
+    crawlSmartRecruitersJobs(),
+    crawlWorkableJobs(),
   ])
+
+  const [
+    githubResult,
+    leverResult,
+    greenhouseResult,
+    smartRecruitersResult,
+    workableResult,
+  ] = results
+
+  const toCount = (label: string, result: PromiseSettledResult<number>) => {
+    if (result.status === 'fulfilled') {
+      return result.value
+    }
+
+    console.error(`❌ ${label} crawl failed:`, result.reason)
+    return 0
+  }
+
+  const githubCount = toCount('GitHub', githubResult)
+  const leverCount = toCount('Lever', leverResult)
+  const greenhouseCount = toCount('Greenhouse', greenhouseResult)
+  const smartRecruitersCount = toCount('SmartRecruiters', smartRecruitersResult)
+  const workableCount = toCount('Workable', workableResult)
   
-  const totalJobs = githubCount + leverCount + greenhouseCount
+  const totalJobs = githubCount + leverCount + greenhouseCount + smartRecruitersCount + workableCount
   
   console.log(`\n🎉 Crawling complete!`)
   console.log(`  GitHub: ${githubCount} jobs`)
   console.log(`  Lever: ${leverCount} jobs`)
   console.log(`  Greenhouse: ${greenhouseCount} jobs`)
+  console.log(`  SmartRecruiters: ${smartRecruitersCount} jobs`)
+  console.log(`  Workable: ${workableCount} jobs`)
   console.log(`  Total: ${totalJobs} jobs`)
   
   process.exit(0)

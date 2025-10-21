@@ -5,6 +5,7 @@ import { logger } from 'hono/logger'
 import jobsRouter from './routes/jobs'
 import applicationsRouter from './routes/applications'
 import profileRouter from './routes/profile'
+import collateralRouter from './routes/collateral'
 import type { AppEnv } from './types'
 import { attachUser } from './middleware/auth'
 
@@ -24,6 +25,7 @@ app.get('/health', (c) => {
 app.route('/api/jobs', jobsRouter)
 app.route('/api/applications', applicationsRouter)
 app.route('/api/profile', profileRouter)
+app.route('/api/collateral', collateralRouter)
 
 // 404 handler
 app.notFound((c) => {

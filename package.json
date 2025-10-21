@@ -12,6 +12,7 @@
     "dev:api": "npm run dev -w apps/api",
     "dev:web": "npm run dev -w apps/web",
     "build": "npm run build -w apps/api && npm run build -w apps/web",
+    "test": "vitest run",
     "crawl": "tsx scripts/crawlers/github-jobs.ts",
     "crawl:all": "tsx scripts/crawlers/multi-platform-crawler.ts",
     "discover:companies": "tsx scripts/crawlers/discover-companies.ts",
@@ -26,8 +27,9 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
-    "concurrently": "^8.2.2",
+    "concurrently": "^8.2.2", 
     "drizzle-kit": "^0.31.5",
+    "vitest": "^1.6.0",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3"
   },
