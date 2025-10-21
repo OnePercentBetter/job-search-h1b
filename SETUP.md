@@ -1,178 +1,100 @@
-# Quick Setup Guide
+# Setup Guide
 
-Follow these steps to get your job search app running this weekend!
+This is a quick guide to get the job search app running locally.
 
-## ⚡ 5-Minute Setup
+## What you need
 
-### 1. Install Dependencies
+- Node.js (version 18 or higher)
+- A Supabase account
+- OpenAI API key
+
+## Step 1: Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2. Set Up Supabase (Easiest Option)
+## Step 2: Set up Supabase
 
-1. Go to [supabase.com](https://supabase.com) and create a free account
+1. Go to [supabase.com](https://supabase.com) and sign up
 2. Create a new project
 3. Go to Settings → Database and copy the connection string
-4. Go to Settings → API and copy the `anon` public key
+4. Go to Settings → API and copy the anon key
 
-### 3. Get OpenAI API Key
+## Step 3: Get OpenAI API key
 
 1. Go to [platform.openai.com](https://platform.openai.com)
 2. Create an API key
-3. Add $5-10 credits (embeddings are very cheap)
+3. Add some credits (embeddings are really cheap, $5-10 is plenty)
 
-### 4. Create `.env` File
+## Step 4: Environment variables
 
-Create a file called `.env` in the root directory:
+Create a `.env` file in the root directory:
 
 ```bash
 # Supabase
-SUPABASE_URL=https://xxxxx.supabase.co
-SUPABASE_ANON_KEY=your-anon-key-here
-SUPABASE_JWT_SECRET=your-jwt-secret-here
-DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.xxxxx.supabase.co:5432/postgres
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_JWT_SECRET=your-jwt-secret
+DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/postgres
 
 # OpenAI
-OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx
+OPENAI_API_KEY=sk-your-key-here
 
-# Landing Club (Visa Sponsors)
-LANDING_CLUB_API_KEY=your-landing-club-api-key
-LANDING_CLUB_API_BASE_URL=https://api.landing.club/v1
-
-# API Config
+# API
 PORT=3000
 
-# Frontend Config
+# Frontend
 VITE_API_URL=http://localhost:3000
-VITE_SUPABASE_URL=https://xxxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-### 5. Set Up Database
+## Step 5: Database setup
 
 ```bash
-# Enable pgvector extension (Supabase has it pre-installed)
 npm run db:generate
-
-# Push schema to database
 npm run db:push
 ```
 
-### 6. Seed Some Jobs (Optional)
+## Step 6: Add some test data (optional)
 
 ```bash
 npm run crawl
 ```
 
-This will add some test jobs to your database.
+This will scrape some jobs from GitHub and add them to your database.
 
-### 7. Start Development!
+## Step 7: Start the app
 
 ```bash
 npm run dev
 ```
 
-Visit:
+Then visit:
 - Frontend: http://localhost:5173
 - API: http://localhost:3000
 
-## 🎯 Weekend Build Timeline
+## Common problems
 
-### Saturday Morning (3 hours)
-- ✅ You've already scaffolded the project!
-- Set up Supabase and get API keys
-- Run database migrations
-- Verify everything runs locally
+**"Cannot connect to database"**
+- Check your DATABASE_URL in `.env`
+- Make sure you replaced the password in the connection string
 
-### Saturday Afternoon (3-4 hours)
-- Customize the GitHub crawler to scrape real jobs
-- Test vector search with your profile description
-- Add more job sources if time permits
-
-### Sunday Morning (3 hours)
-- Implement Supabase Auth (replace placeholder auth)
-- Polish the UI
-- Fix any bugs
-
-### Sunday Afternoon (2-3 hours)
-- Test with a real user (yourself!)
-- Deploy to Vercel
-- Share with your first test user
-
-## 📝 Critical Files to Understand
-
-1. **apps/api/src/db/schema.ts** - Database structure
-2. **apps/api/src/routes/jobs.ts** - Job search API
-3. **apps/web/src/pages/Dashboard.tsx** - Main UI
-4. **scripts/crawlers/github-jobs.ts** - Job scraping logic
-
-## 🚨 Common Issues
-
-### "Cannot connect to database"
-- Double-check your DATABASE_URL in `.env`
-- Make sure you replaced `[YOUR-PASSWORD]` with your actual Supabase password
-
-### "OpenAI API error"
+**"OpenAI API error"**
 - Verify your API key is correct
-- Make sure you have credits in your OpenAI account
+- Check you have credits in your OpenAI account
 
-### "Port already in use"
-- Change PORT in `.env` to 3001 or another available port
-- Update VITE_API_URL accordingly
+**"Port already in use"**
+- Change PORT in `.env` to 3001
+- Update VITE_API_URL to match
 
-## 🎨 Customization Ideas
+## What's next
 
-1. **Add More Job Sources**
-   - Copy `scripts/crawlers/lever-api.ts` and modify for other sources
-   - Ideas: Indeed API, LinkedIn, AngelList, Y Combinator jobs
+Once it's running, you can:
+- Add more job sources by modifying the crawlers
+- Customize the UI
+- Add authentication
+- Deploy to Vercel
 
-2. **Improve UI**
-   - Add animations with Framer Motion
-   - Use shadcn/ui components for better design
-   - Add dark mode
-
-3. **Better Matching**
-   - Use GPT-4 for more nuanced job descriptions
-   - Add salary prediction
-   - Implement job recommendations
-
-## 📊 Monitoring Costs
-
-- **Supabase Free Tier**: 500MB database, 2GB bandwidth (plenty for MVP)
-- **OpenAI Embeddings**: ~$0.01 per 1,000 jobs embedded
-- **Vercel Free Tier**: 100GB bandwidth, serverless functions
-
-**Expected monthly cost for 100-200 users: $5-20**
-
-## 🚀 Deployment
-
-### Deploy Frontend + API to Vercel
-
-```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy
-vercel
-
-# Follow prompts to deploy
-```
-
-Add environment variables in Vercel dashboard:
-- SUPABASE_URL
-- SUPABASE_ANON_KEY
-- DATABASE_URL
-- OPENAI_API_KEY
-
-## 🎓 Learning Resources
-
-- **Hono Docs**: https://hono.dev
-- **Drizzle ORM**: https://orm.drizzle.team
-- **pgvector Guide**: https://github.com/pgvector/pgvector
-- **OpenAI Embeddings**: https://platform.openai.com/docs/guides/embeddings
-
----
-
-**You're all set! Build something amazing this weekend! 🚀**
+The app should work out of the box with the basic setup above.

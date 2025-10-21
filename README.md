@@ -1,83 +1,51 @@
-# Job Search Application
+# Job Search App
 
-A job search platform for college seniors looking for new grad roles and internships. Uses AI-powered vector search to match candidates with their ideal positions.
+A simple job search platform I built to help college students find new grad roles and internships. It uses AI to match your preferences with relevant job postings.
 
-## 🎯 Features
+## What it does
 
-- **AI-Powered Matching**: Vector embeddings match your preferences with relevant jobs
-- **Multi-Source Crawling**: Aggregates jobs from GitHub lists, Lever API, and more
-- **Application Tracking**: Save and track your applications through the hiring process
-- **Smart Filters**: Filter by location, remote status, and job type
-- **Real-time Search**: Natural language search to find exactly what you're looking for
+- Searches jobs from multiple sources (GitHub, company sites, etc.)
+- Uses AI embeddings to find jobs that match your profile
+- Tracks your applications and saves interesting positions
+- Filters by location, remote work, job type, and visa sponsorship
 
-## 🔐 Visa Sponsorship Capabilities
-- Dedicated `visa_sponsors` table with curated data (seeded in `data/visa-sponsors.json`)
-- Jobs enriched with visa metadata (status, confidence, sponsor notes, link freshness)
-- GitHub crawler now fetches live repos and cross-references sponsor data, auto-detects stale postings
-- Landing Club API integration keeps sponsor records fresh with real-time company updates
-- API search supports visa-specific filters (`visaStatus`, `minSponsorshipConfidence`, `requiresVerifiedSponsor`)
-- Frontend filters expose sponsor status, confidence thresholds, and verified-only toggle
+## Tech stack
 
-## 🏗️ Tech Stack
+- Frontend: React + Vite + Tailwind
+- Backend: Hono (TypeScript framework)
+- Database: PostgreSQL with pgvector for similarity search
+- AI: OpenAI embeddings API
+- Auth: Supabase (when I get around to it)
 
-- **Frontend**: React + Vite + TailwindCSS
-- **Backend**: Hono (TypeScript)
-- **Database**: PostgreSQL with pgvector extension
-- **AI**: OpenAI embeddings API
-- **Auth**: Supabase Auth (planned)
-
-## 📦 Project Structure
-
-```
-job-search/
-├── apps/
-│   ├── api/              # Hono backend
-│   │   └── src/
-│   │       ├── routes/   # API endpoints
-│   │       ├── services/ # Business logic
-│   │       ├── db/       # Database schema
-│   │       └── lib/      # Utilities
-│   └── web/              # Vite + React frontend
-│       └── src/
-│           ├── pages/    # Route pages
-│           └── components/
-├── scripts/
-│   └── crawlers/         # Job scraping scripts
-└── drizzle/              # Database migrations
-```
-
-## 🚀 Getting Started
+## Getting started
 
 ### Prerequisites
 
+You'll need:
 - Node.js 18+
-- PostgreSQL database (or Supabase account)
-- OpenAI API key
+- A Supabase account (free tier works fine)
+- OpenAI API key (embeddings are cheap, like $5-10)
 
-### 1. Clone and Install
+### Setup
 
+1. Clone and install dependencies:
 ```bash
+git clone <your-repo>
 cd job-search
 npm install
 ```
 
-### 2. Environment Setup
-
-Create a `.env` file in the root:
+2. Set up your environment variables. Create a `.env` file in the root:
 
 ```bash
-# Supabase (or regular PostgreSQL)
+# Supabase
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_JWT_SECRET=your-jwt-secret
-DATABASE_URL=postgresql://user:password@localhost:5432/jobsearch
+DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/postgres
 
 # OpenAI
-OPENAI_API_KEY=sk-your-openai-key
-
-# Landing Club (Visa Sponsors)
-LANDING_CLUB_API_KEY=your-landing-club-api-key
-LANDING_CLUB_API_BASE_URL=https://api.landing.club/v1
+OPENAI_API_KEY=sk-your-key-here
 
 # API
 PORT=3000
@@ -88,169 +56,91 @@ VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-### 3. Database Setup
-
+3. Set up the database:
 ```bash
-# Enable pgvector extension
-npm run db:setup
-
-# Generate migrations
 npm run db:generate
-
-# Push schema to database
 npm run db:push
 ```
 
-### 4. Seed Jobs (Optional)
-
+4. (Optional) Add some test jobs:
 ```bash
-# Run the GitHub crawler
 npm run crawl
 ```
 
-### 5. Start Development
-
+5. Start the app:
 ```bash
-# Start both API and frontend
 npm run dev
-
-# Or start separately:
-npm run dev:api  # API on http://localhost:3000
-npm run dev:web  # Frontend on http://localhost:5173
 ```
 
-## 📝 Available Scripts
+Visit http://localhost:5173 to see the frontend.
 
-- `npm run dev` - Start both API and frontend in dev mode
-- `npm run build` - Build for production
+## How it works
+
+The app crawls job postings from various sources and stores them in a PostgreSQL database. Each job gets converted to a vector embedding using OpenAI's API. When you search, it converts your query to an embedding and finds similar jobs using cosine similarity.
+
+The visa sponsorship stuff is still a work in progress - I'm pulling data from USCIS and trying to match it with job postings.
+
+## Project structure
+
+```
+job-search/
+├── apps/
+│   ├── api/          # Backend API
+│   └── web/          # React frontend
+├── scripts/
+│   └── crawlers/     # Job scraping scripts
+└── drizzle/          # Database migrations
+```
+
+## Available scripts
+
+- `npm run dev` - Start both frontend and API
+- `npm run dev:api` - Just the API
+- `npm run dev:web` - Just the frontend
 - `npm run crawl` - Run job crawler
-- `npm run db:generate` - Generate Drizzle migrations
-- `npm run db:push` - Push schema changes to database
-- `npm run db:studio` - Open Drizzle Studio (database GUI)
+- `npm run db:push` - Update database schema
+- `npm run db:studio` - Open database GUI
 
-## 🗄️ Database Schema
+## API endpoints
 
-### Users
-- Profile description (text)
-- Profile embedding (vector)
-- Auth integration
-
-### Jobs
-- Title, company, location, description
-- Embedding (vector for similarity search)
-- Remote status, job type
-- Source tracking
-
-### Applications
-- User-job relationship
-- Status tracking (saved, applied, interviewing, etc.)
-- Notes
-
-## 🔍 How It Works
-
-1. **Crawling**: Scripts fetch jobs from multiple sources (GitHub, Lever API, etc.)
-2. **Embedding**: OpenAI generates vector embeddings for each job description
-3. **Storage**: Jobs stored in PostgreSQL with pgvector extension
-4. **Matching**: User describes preferences → system generates embedding → finds similar jobs via cosine similarity
-5. **Tracking**: Users save jobs and track application status
-
-## 🎨 Frontend Routes
-
-- `/dashboard` - Search and browse jobs
-- `/profile` - Set your job preferences
-- `/applications` - Track saved applications
-- `/login` - Authentication (to be implemented)
-
-## 🔑 API Endpoints
-
-### Jobs
-- `GET /api/jobs/search?description=...&jobType=...` - Search jobs
-- `GET /api/jobs/:id` - Get single job
-
-### Applications
-- `GET /api/applications` - Get user's applications
+- `GET /api/jobs` - List jobs with optional filters
+- `GET /api/jobs/search` - Search with AI matching
+- `GET /api/jobs/:id` - Get specific job
+- `GET /api/applications` - Your saved applications
 - `POST /api/applications` - Save a job
-- `PATCH /api/applications/:id` - Update status
+- `PUT /api/profile` - Update your profile
 
-### Profile
-- `GET /api/profile` - Get user profile
-- `PUT /api/profile` - Update profile & regenerate embedding
+## Deployment
 
-## 🚢 Deployment
-
-### Recommended Stack
-
-- **Frontend**: Vercel (or Netlify)
-- **API**: Vercel Serverless Functions (or Cloudflare Workers)
-- **Database**: Supabase (or AWS RDS)
-
-### Deploy to Vercel
+I deployed this on Vercel. The frontend goes to Vercel, API as serverless functions, and database stays on Supabase.
 
 ```bash
-# Install Vercel CLI
 npm i -g vercel
-
-# Deploy
 vercel
 ```
 
-## 📈 Scaling Plan
+Don't forget to add your environment variables in the Vercel dashboard.
 
-### MVP (1-10 users)
-- Serverless functions (Vercel/Cloudflare)
-- Supabase free tier
-- Manual crawler runs
+## Issues I'm still working on
 
-### Growth (10-100 users)
-- Add caching (Redis/Upstash)
-- Scheduled crawlers (cron jobs)
-- Better auth (Supabase Auth)
+- Authentication is half-implemented
+- Need to add more job sources
+- The UI could use some polish
+- Want to add email notifications for new matches
 
-### Scale (100-1000 users)
-- Dedicated backend server (AWS ECS/Fargate)
-- Database optimization (indexes, connection pooling)
-- CDN for frontend assets
+## Costs
 
-## 🛠️ Next Steps
+Running this costs almost nothing:
+- Supabase free tier: 500MB database
+- OpenAI embeddings: ~$0.01 per 1000 jobs
+- Vercel free tier: 100GB bandwidth
 
-- [ ] Implement Supabase authentication
-- [ ] Add more job sources (Indeed, LinkedIn, etc.)
-- [ ] Schedule automated crawlers
-- [ ] Email notifications for new matches
-- [ ] Advanced filters (salary, visa sponsorship, etc.)
-- [ ] Chrome extension for quick job saving
-- [ ] Mobile app (React Native)
+For a few hundred users, maybe $5-20/month total.
 
-## 💡 Tips
-
-- **Vector Search**: The more detailed your profile description, the better the matches
-- **Crawlers**: Run crawlers daily to keep job listings fresh
-- **Costs**: OpenAI embeddings are ~$0.0001 per 1K tokens (very cheap)
-- **Performance**: Add database indexes if searches become slow
-
-## 🐛 Troubleshooting
-
-### "Failed to connect to database"
-- Check your `DATABASE_URL` in `.env`
-- Ensure PostgreSQL is running
-- For Supabase, use the connection string from Settings → Database
-
-### "OpenAI API error"
-- Verify your `OPENAI_API_KEY` is valid
-- Check you have API credits
-
-### "pgvector extension not found"
-- Run `npm run db:setup` to enable the extension
-- For Supabase, it's pre-installed
-
-## 📄 License
+## License
 
 MIT
 
-## 🤝 Contributing
-
-This is a personal project, but suggestions are welcome! Open an issue to discuss.
-
 ---
 
-**Built with ❤️ for college students navigating the job search**
+Built this to solve my own job search problems. Feel free to use it or suggest improvements.
